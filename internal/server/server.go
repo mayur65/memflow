@@ -39,14 +39,23 @@ func handleClient(conn net.Conn, db *storage.DB) {
 
 	cmd, _ := protocol.ParseCommand(command)
 
-	var response = ""
+	response := executeCommand(&cmd, db)
 
-	if cmd.Name == "GET" {
+	_, _ = conn.Write([]byte(response))
+}
+
+func executeCommand(cmd *protocol.Command, db *storage.DB) string {
+
+	var response string
+
+	switch cmd.Name {
+	case "GET":
 		response = db.Get(cmd.Args[0])
-	} else if cmd.Name == "SET" {
+	case "SET":
 		response = db.Set(cmd.Args[0], cmd.Args[1])
-	} else {
+	default:
 		response = "Unknown command: " + cmd.Name
 	}
-	_, _ = conn.Write([]byte(response))
+
+	return response
 }

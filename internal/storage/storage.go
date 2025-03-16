@@ -34,9 +34,7 @@ func (db *DB) Get(key string) string {
 	//}
 
 	val, ok := db.data[key]
-	fmt.Println(key)
-	fmt.Println(ok)
-	fmt.Println(key)
+
 	if !ok {
 		return "KEY_NOT_FOUND"
 	}
