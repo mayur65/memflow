@@ -22,3 +22,13 @@ func TestKeyNotFound(t *testing.T) {
 	value := db.Get("Key")
 	assert.Equal(t, "KEY_NOT_FOUND", value, "GET response mismatch")
 }
+
+func TestKeyDelete(t *testing.T) {
+	db := storage.InitDB()
+
+	response := db.Set("Key", "Value")
+	assert.Equal(t, "200 - Value set for Key", response, "SET response mismatch")
+
+	response = db.Delete("Key")
+	assert.Equal(t, "200 - Value deleted for Key", response, "DELETE response mismatch")
+}

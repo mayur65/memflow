@@ -59,4 +59,18 @@ func (db *DB) Set(key, value string) string {
 	return "200 - Value set for Key"
 }
 
+func (db *DB) Delete(key string) string {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	_, ok := db.data[key]
+
+	if !ok {
+		return "KEY_NOT_FOUND"
+	}
+
+	delete(db.data, key)
+	return "200 - Value deleted for Key"
+}
+
 //Implement periodic expired kv clean-up

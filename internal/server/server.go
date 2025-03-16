@@ -53,6 +53,8 @@ func executeCommand(cmd *protocol.Command, db *storage.DB) string {
 		response = db.Get(cmd.Args[0])
 	case "SET":
 		response = db.Set(cmd.Args[0], cmd.Args[1])
+	case "DEL":
+		response = db.Delete(cmd.Args[0])
 	default:
 		response = "Unknown command: " + cmd.Name
 	}
