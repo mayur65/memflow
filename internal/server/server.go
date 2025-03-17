@@ -20,6 +20,7 @@ func Start(address string) {
 			fmt.Println("Error accepting connection: " + err.Error())
 		}
 		go handleClient(conn, db)
+		go db.PeriodicCleaning()
 	}
 }
 

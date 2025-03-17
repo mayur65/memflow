@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"github.com/mayur65/memflow/internal/config"
 	"sync"
 	"time"
 )
@@ -23,21 +24,17 @@ func (db *DB) Get(key string) string {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	//expiry, ok := db.ttl[key]
-	//
-	//if !ok {
-	//	return "Key does not exist"
-	//}
-	//
-	//if time.Now().After(expiry) {
-	//	return "Key expired"
-	//}
-
-	val, ok := db.data[key]
+	expiry, ok := db.ttl[key]
 
 	if !ok {
 		return "KEY_NOT_FOUND"
 	}
+
+	if time.Now().After(expiry) {
+		return "Key expired"
+	}
+
+	val, ok := db.data[key]
 
 	return val
 }
@@ -47,12 +44,7 @@ func (db *DB) Set(key, value string) string {
 	defer db.mu.Unlock()
 
 	db.data[key] = value
-
-	//if ttl > 0 {
-	//	db.ttl[key] = time.Now().Add(ttl)
-	//} else {
-	//	delete(db.ttl, key)
-	//}
+	db.ttl[key] = time.Now().Add(config.TimeToLive)
 
 	fmt.Println(db.data)
 
@@ -70,7 +62,28 @@ func (db *DB) Delete(key string) string {
 	}
 
 	delete(db.data, key)
+	delete(db.ttl, key)
+
 	return "200 - Value deleted for Key"
 }
 
-//Implement periodic expired kv clean-up
+func (db *DB) PeriodicCleaning() {
+
+	for {
+		time.Sleep(time.Minute)
+
+		db.mu.Lock()
+
+		now := time.Now()
+
+		for k, v := range db.ttl {
+			if now.After(v) {
+				delete(db.data, k)
+				delete(db.ttl, k)
+			}
+		}
+
+		db.mu.Unlock()
+	}
+
+}
