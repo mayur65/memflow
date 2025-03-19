@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/mayur65/memflow/internal/config"
 	"sync"
 	"time"
@@ -46,7 +45,7 @@ func (db *DB) Set(key, value string) string {
 	db.data[key] = value
 	db.ttl[key] = time.Now().Add(config.TimeToLive)
 
-	fmt.Println(db.data)
+	//log.Print(db.data)
 
 	return "200 - Value set for Key"
 }

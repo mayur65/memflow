@@ -1,23 +1,36 @@
 package server
 
 import (
-	"fmt"
 	"github.com/mayur65/memflow/internal/protocol"
 	"github.com/mayur65/memflow/internal/storage"
+	"log"
 	"net"
+	"os"
 )
 
 func Start(address string) {
+
+	logFile, err := os.OpenFile("output.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Error opening log file: %v", err)
+	}
+	defer logFile.Close()
+
+	// Set log output to file
+	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile) // Adds timestamps & file names
+
 	listener, _ := net.Listen("tcp", address)
 
-	fmt.Println("Memflow started on ... " + address)
+	log.Print("Memflow started on ... " + address)
+	defer listener.Close()
 
 	db := storage.InitDB()
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: " + err.Error())
+			log.Fatalf("Error accepting connection: " + err.Error())
 		}
 		go handleClient(conn, db)
 		go db.PeriodicCleaning()
@@ -32,17 +45,16 @@ func handleClient(conn net.Conn, db *storage.DB) {
 	//Make this a stream later?
 	n, err := conn.Read(buffer)
 	if err != nil {
-		fmt.Println("Error reading: " + err.Error())
+		log.Print("Error reading: " + err.Error())
 	}
 
 	command := string(buffer[:n])
-	fmt.Println(command)
+	log.Print(command)
 
 	cmd, _ := protocol.ParseCommand(command)
 
 	response := executeCommand(&cmd, db)
-
-	_, _ = conn.Write([]byte(response))
+	_, _ = conn.Write([]byte(response + "\n"))
 }
 
 func executeCommand(cmd *protocol.Command, db *storage.DB) string {
