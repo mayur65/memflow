@@ -10,7 +10,7 @@ import (
 
 const (
 	serverAddress = "localhost:8082"
-	numRequests   = 300
+	numRequests   = 1000
 	concurrency   = 1
 )
 

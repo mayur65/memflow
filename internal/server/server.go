@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 func Start(address string) {
@@ -26,6 +27,17 @@ func Start(address string) {
 	defer listener.Close()
 
 	db := storage.InitDB()
+
+	err = db.LoadRDB("save.rdb")
+
+	if err != nil {
+		log.Print(err)
+		log.Print("Initializing new db, no saved RDB to load.")
+	} else {
+		log.Print("Loaded saved RDB.")
+	}
+
+	go periodicSave(db)
 
 	for {
 		conn, err := listener.Accept()
@@ -73,4 +85,17 @@ func executeCommand(cmd *protocol.Command, db *storage.DB) string {
 	}
 
 	return response
+}
+
+func periodicSave(db *storage.DB) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		err := db.SaveRDB("save.rdb")
+		if err != nil {
+			log.Printf("Error saving RDB: %v", err)
+		}
+	}
+
 }

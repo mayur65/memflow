@@ -3,6 +3,7 @@ package tests
 import (
 	"github.com/mayur65/memflow/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 	"time"
 )
@@ -56,4 +57,21 @@ func TestKeyCleanup(t *testing.T) {
 
 	value := db.Get("Key")
 	assert.Equal(t, "KEY_NOT_FOUND", value, "GET response mismatch")
+}
+
+func TestRDBSaved(t *testing.T) {
+	// Create db, set kv pair and save RDB snapshot.
+	db := storage.InitDB()
+	db.Set("Key", "Value")
+	err := db.SaveRDB("test.rdb")
+	assert.NoError(t, err, "Error saving RDB.")
+
+	// Create newDb, load the saved snapshot, and assert on kv pair.
+	newDb := storage.InitDB()
+	err = newDb.LoadRDB("test.rdb")
+	assert.NoError(t, err, "Error loading RDB.")
+	value := newDb.Get("Key")
+	assert.Equal(t, "Value", value, "GET response mismatch")
+
+	_ = os.Remove("test.rdb")
 }

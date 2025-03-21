@@ -1,21 +1,24 @@
 package storage
 
 import (
+	"encoding/gob"
 	"github.com/mayur65/memflow/internal/config"
+	"log"
+	"os"
 	"sync"
 	"time"
 )
 
 type DB struct {
-	data map[string]string
-	ttl  map[string]time.Time
+	Data map[string]string
+	Ttl  map[string]time.Time
 	mu   sync.RWMutex
 }
 
 func InitDB() *DB {
 	return &DB{
-		data: make(map[string]string),
-		ttl:  make(map[string]time.Time),
+		Data: make(map[string]string),
+		Ttl:  make(map[string]time.Time),
 	}
 }
 
@@ -23,7 +26,7 @@ func (db *DB) Get(key string) string {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	expiry, ok := db.ttl[key]
+	expiry, ok := db.Ttl[key]
 
 	if !ok {
 		return "KEY_NOT_FOUND"
@@ -33,7 +36,7 @@ func (db *DB) Get(key string) string {
 		return "Key expired"
 	}
 
-	val, ok := db.data[key]
+	val, ok := db.Data[key]
 
 	return val
 }
@@ -42,10 +45,10 @@ func (db *DB) Set(key, value string) string {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.data[key] = value
-	db.ttl[key] = time.Now().Add(config.TimeToLive)
+	db.Data[key] = value
+	db.Ttl[key] = time.Now().Add(config.TimeToLive)
 
-	//log.Print(db.data)
+	//log.Print(db.Data)
 
 	return "200 - Value set for Key"
 }
@@ -54,14 +57,14 @@ func (db *DB) Delete(key string) string {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	_, ok := db.data[key]
+	_, ok := db.Data[key]
 
 	if !ok {
 		return "KEY_NOT_FOUND"
 	}
 
-	delete(db.data, key)
-	delete(db.ttl, key)
+	delete(db.Data, key)
+	delete(db.Ttl, key)
 
 	return "200 - Value deleted for Key"
 }
@@ -75,14 +78,52 @@ func (db *DB) PeriodicCleaning() {
 
 		now := time.Now()
 
-		for k, v := range db.ttl {
+		for k, v := range db.Ttl {
 			if now.After(v) {
-				delete(db.data, k)
-				delete(db.ttl, k)
+				delete(db.Data, k)
+				delete(db.Ttl, k)
 			}
 		}
 
 		db.mu.Unlock()
 	}
 
+}
+
+func (db *DB) SaveRDB(path string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	file, err := os.Create(path)
+
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := gob.NewEncoder(file)
+	err = encoder.Encode(db)
+	if err != nil {
+		return err
+	}
+
+	log.Print("RDB Backup created")
+
+	return nil
+}
+
+func (db *DB) LoadRDB(path string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&db)
+
+	return err
 }
